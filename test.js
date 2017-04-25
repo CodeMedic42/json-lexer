@@ -1,5 +1,5 @@
 var test = require('tape')
-var lexer = require('./')
+var lexer = require('./index.js')
 
 test('lexer', function (t) {
   t.test('literals', function (t) {

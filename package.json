@@ -5,6 +5,7 @@
   "scripts": {
     "pretest": "standard",
     "test": "nyc tape --no-cov test.js",
+    "test-debug": "node --inspect --debug-brk test.js ./node_modules/tape/bin/tape -- test.js",
     "test:coverage": "nyc report --reporter=text-lcov | coveralls",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
