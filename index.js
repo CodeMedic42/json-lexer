@@ -19,7 +19,9 @@ function setDefaults (options) {
   }
 
   return {
-    throwOnError: typeof options.throwOnError === 'boolean' ? options.throwOnError : defaults.throwOnError
+    throwOnError: typeof options.throwOnError === 'boolean'
+       ? options.throwOnError
+       : defaults.throwOnError
   }
 }
 
@@ -43,6 +45,7 @@ function lex (source, options) {
     var charCode
     var character
     var issue = null
+    var raw
 
     while (index < length) {
       character = source[index]
@@ -78,9 +81,8 @@ function lex (source, options) {
             character = source[index]
             if (source.charCodeAt(index) < 32) {
               issue = abort('Unescaped ASCII control characters are not permitted.', index - stringStartIndex, 1)
-
-              var rawString = source.slice(stringStartIndex, index + 1)
-              return { type: 'string', value: null, raw: rawString, issue }
+              raw = source.slice(stringStartIndex, index + 1)
+              return { type: 'string', value: null, raw, issue }
             } else if (character === '\\') {
               // A reverse solidus (`\`) marks the beginning of an escaped
               // control character (including `"`, `\`, and `/`) or Unicode
@@ -112,10 +114,9 @@ function lex (source, options) {
                     // insensitive) that form a single hexadecimal value.
                     if (!((charCode >= 48 && charCode <= 57) || (charCode >= 97 && charCode <= 102) || (charCode >= 65 && charCode <= 70))) {
                       if (issue == null) {
-                        issue = abort('Invalid Unicode escape sequence.', index - stringStartIndex - 1, 1)
-
-                        var rawString = source.slice(stringStartIndex, index + 1)
-                        return { type: 'string', value: null, raw: rawString, issue }
+                        issue = abort('Invalid Unicode escape sequence.', begin - stringStartIndex - 2, 2)
+                        raw = source.slice(stringStartIndex, index + 1)
+                        return { type: 'string', value: null, raw, issue }
                       }
                     }
                   }
@@ -126,9 +127,9 @@ function lex (source, options) {
                   }
                   break
                 default:
-                  issue = abort('Invalid escape sequence.', index - stringStartIndex - 1, 1)
-                  var rawString = source.slice(stringStartIndex, index + 1)
-                  return { type: 'string', value: null, raw: rawString, issue }
+                  issue = abort('Invalid escape sequence.', index - stringStartIndex - 1, 2)
+                  raw = source.slice(stringStartIndex, index + 1)
+                  return { type: 'string', value: null, raw, issue }
               }
             } else {
               if (character === '"') {
@@ -153,14 +154,13 @@ function lex (source, options) {
           if (source[index] === '"') {
             // Advance to the next character and return the revived string.
             index++
-            var rawString = source.slice(stringStartIndex, index)
-
-            return { type: 'string', value: value, raw: rawString, issue }
+            raw = source.slice(stringStartIndex, index)
+            return { type: 'string', value, raw }
           }
 
           issue = abort('Unterminated string.', 0, index)
-          var rawString = source.slice(stringStartIndex, index)
-          return { type: 'string', value: null, raw: rawString, issue }
+          raw = source.slice(stringStartIndex, index)
+          return { type: 'string', value: null, raw, issue }
         default:
           // Parse numbers and literals.
           begin = index
@@ -175,9 +175,9 @@ function lex (source, options) {
           if (charCode >= 48 && charCode <= 57) {
             // Leading zeroes are interpreted as octal literals.
             if (charCode === 48 && ((charCode = source.charCodeAt(index + 1)), charCode >= 48 && charCode <= 57)) {
-              if (issue == null) {
-                issue = abort('Illegal octal literal.', index - begin, 1)
-              }
+              issue = abort('Illegal octal literal.', index - begin, 1)
+              raw = source.slice(begin, index)
+              return { type: 'number', value: null, raw, issue }
             }
             isSigned = false
             // Parse the integer component.
@@ -189,9 +189,9 @@ function lex (source, options) {
               // Parse the decimal component.
               for (; position < length && ((charCode = source.charCodeAt(position)), charCode >= 48 && charCode <= 57); position++);
               if (position === index) {
-                if (issue == null) {
-                  issue = abort('Illegal trailing decimal.', index - begin, 1)
-                }
+                issue = abort('Illegal trailing decimal.', index - begin - 1, 1)
+                raw = source.slice(begin, index)
+                return { type: 'number', value: null, raw, issue }
               }
               index = position
             }
@@ -208,28 +208,28 @@ function lex (source, options) {
               // Parse the exponential component.
               for (position = index; position < length && ((charCode = source.charCodeAt(position)), charCode >= 48 && charCode <= 57); position++) ;
               if (position === index) {
-                if (issue == null) {
-                  issue = abort('Illegal empty exponent.', index - begin, 1)
-                }
+                issue = abort('Illegal empty exponent.', index - begin, 1)
+                raw = source.slice(begin, index)
+                return { type: 'number', value: null, raw, issue }
               }
               index = position
             }
 
-            var numberString = source.slice(begin, index)
+            raw = source.slice(begin, index)
             var numberValue = null
 
             if (issue == null) {
                 // Coerce the parsed value to a JavaScript number.
-              numberValue = +numberString
+              numberValue = +raw
             }
 
-            return { type: 'number', value: numberValue, raw: numberString, issue }
+            return { type: 'number', value: numberValue, raw }
           }
 
           if (isSigned) {
-            if (issue == null) {
-              issue = abort('A negative sign may only precede numbers.', index - begin, 1)
-            }
+            issue = abort('A negative sign may only precede numbers.', index - begin, 1)
+            raw = source.slice(begin, index)
+            return { type: 'number', value: null, raw, issue }
           }
 
           // `true`, `false`, and `null` literals.
@@ -247,7 +247,6 @@ function lex (source, options) {
           }
 
           issue = abort('Unrecognized token.', 0, 1)
-
           return { type: 'unknown', value: null, raw: temp[0], issue }
       }
     }
