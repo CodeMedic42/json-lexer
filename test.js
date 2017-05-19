@@ -117,6 +117,124 @@ test('lexer', function (t) {
     ])
     t.end()
   })
+
+  const newLine = String.fromCharCode(10)
+  const backslash = String.fromCharCode(92)
+
+  t.test('errors', function (t1) {
+    t1.test('Unescaped ASCII control characters are not permitted.', function (t2) {
+      testCase(t2, `"break${newLine}break"`, [
+        { type: 'string', value: null, raw: `"break${newLine}break"`, issue: { message: 'Unescaped ASCII control characters are not permitted.', start: 6, length: 1 } }
+      ], { throwOnError: false })
+      testCase(t2, `"break${newLine}${newLine}break"`, [
+        { type: 'string', value: null, raw: `"break${newLine}${newLine}break"`, issue: { message: 'Unescaped ASCII control characters are not permitted.', start: 6, length: 1 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":"break${newLine}break"}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' },
+        { type: 'string', value: null, raw: `"break${newLine}break"`, issue: { message: 'Unescaped ASCII control characters are not permitted.', start: 6, length: 1 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":"break${backslash}"${newLine}}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'string',
+          value: null,
+          raw: `"break${backslash}"${newLine}}`,
+          issue: {
+            message: 'Unescaped ASCII control characters are not permitted.',
+            start: 8,
+            length: 1
+          }
+        }], { throwOnError: false })
+      t2.end()
+    })
+    t1.test('Invalid Unicode escape sequence.', function (t2) {
+      testCase(t2, `"${backslash}u"`, [
+        { type: 'string', value: null, raw: `"${backslash}u"`, issue: { message: 'Invalid Unicode escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `"${backslash}u0"`, [
+        { type: 'string', value: null, raw: `"${backslash}u0"`, issue: { message: 'Invalid Unicode escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `"${backslash}u00"`, [
+        { type: 'string', value: null, raw: `"${backslash}u00"`, issue: { message: 'Invalid Unicode escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `"${backslash}u000"`, [
+        { type: 'string', value: null, raw: `"${backslash}u000"`, issue: { message: 'Invalid Unicode escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":"break${backslash}ubreak"}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'string',
+          value: null,
+          raw: `"break${backslash}ubreak"`,
+          issue: {
+            message: 'Invalid Unicode escape sequence.',
+            start: 6,
+            length: 2
+          }
+        }], { throwOnError: false })
+      t2.end()
+    })
+    t1.test('Invalid escape sequence.', function (t2) {
+      testCase(t2, `"${backslash}x"`, [
+        { type: 'string', value: null, raw: `"${backslash}x"`, issue: { message: 'Invalid escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `"${backslash}xbreak"`, [
+        { type: 'string', value: null, raw: `"${backslash}xbreak"`, issue: { message: 'Invalid escape sequence.', start: 1, length: 2 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":"break${backslash}xbreak"}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'string',
+          value: null,
+          raw: `"break${backslash}xbreak"`,
+          issue: {
+            message: 'Invalid escape sequence.',
+            start: 6,
+            length: 2
+          }
+        }], { throwOnError: false })
+      t2.end()
+    })
+    t1.test('Unterminated string.', function (t2) {
+      testCase(t2, `"foo`, [
+        { type: 'string', value: null, raw: `"foo`, issue: { message: 'Unterminated string.', start: 0, length: 4 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":"bar}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'string',
+          value: null,
+          raw: `"bar}`,
+          issue: {
+            message: 'Unterminated string.',
+            start: 0,
+            length: 5
+          }
+        }], { throwOnError: false })
+      t2.end()
+    })
+    t1.test('Illegal octal literal.', function (t2) {
+      t2.end()
+    })
+    t1.test('Illegal trailing decimal.', function (t2) {
+      t2.end()
+    })
+    t1.test('Illegal empty exponent.', function (t2) {
+      t2.end()
+    })
+    t1.test('A negative sign may only precede numbers.', function (t2) {
+      t2.end()
+    })
+    t1.test('Unrecognized token.', function (t2) {
+      t2.end()
+    })
+  })
 })
 
 function attr (attribute, arr) {
@@ -125,10 +243,13 @@ function attr (attribute, arr) {
   })
 }
 
-function testCase (t, json, result) {
-  t.deepEqual(attr('type', lexer(json)), attr('type', result), json + ' types')
-  t.deepEqual(attr('value', lexer(json)), attr('value', result), json + ' values')
-  t.deepEqual(attr('raw', lexer(json)), attr('raw', result), json + ' raw')
+function testCase (t, json, result, options) {
+  var lexed = lexer(json, options)
+
+  t.deepEqual(attr('type', lexed), attr('type', result), json + ' types')
+  t.deepEqual(attr('value', lexed), attr('value', result), json + ' values')
+  t.deepEqual(attr('raw', lexed), attr('raw', result), json + ' raw')
+  t.deepEqual(attr('issue', lexed), attr('issue', result), json + ' issue')
 }
 
 function expectError (t, json, message) {
