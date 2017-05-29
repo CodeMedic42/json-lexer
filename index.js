@@ -38,6 +38,26 @@ function getRawForString (source, start, index) {
   return source.slice(start, endIndex)
 }
 
+function getRawForNumber (source, start, numbersOnly) {
+  var counter = start
+
+  for (counter; counter < source.length; counter += 1) {
+    if ((!numbersOnly) &&
+        (source[counter] === 'e' ||
+         source[counter] === '-' ||
+         source[counter] === '.')) {
+      continue
+    }
+
+    if (source.charCodeAt(counter) < 48 ||
+        source.charCodeAt(counter) > 57) {
+      break
+    }
+  }
+
+  return source.slice(start, counter)
+}
+
 function lex (source, options) {
   function abort (message, start, length) {
     if (opts.throwOnError) {
@@ -213,9 +233,9 @@ function lex (source, options) {
           if (charCode >= 48 && charCode <= 57) {
             // Leading zeroes are interpreted as octal literals.
             if (charCode === 48 && ((charCode = source.charCodeAt(index + 1)), charCode >= 48 && charCode <= 57)) {
-              issue = abort('Illegal octal literal.', index - begin, 1)
+              raw = getRawForNumber(source, begin, true)
 
-              raw = source.slice(begin, index)
+              issue = abort('Illegal octal literal.', 0, raw.length)
 
               return { type: 'number', value: null, raw, issue }
             }
@@ -234,9 +254,9 @@ function lex (source, options) {
               for (; position < length && ((charCode = source.charCodeAt(position)), charCode >= 48 && charCode <= 57); position++);
 
               if (position === index) {
-                issue = abort('Illegal trailing decimal.', index - begin - 1, 1)
+                raw = getRawForNumber(source, begin)
 
-                raw = source.slice(begin, index)
+                issue = abort('Illegal trailing decimal.', index - begin, 1)
 
                 return { type: 'number', value: null, raw, issue }
               }
@@ -261,9 +281,9 @@ function lex (source, options) {
               for (position = index; position < length && ((charCode = source.charCodeAt(position)), charCode >= 48 && charCode <= 57); position++) ;
 
               if (position === index) {
-                issue = abort('Illegal empty exponent.', index - begin, 1)
+                raw = getRawForNumber(source, begin)
 
-                raw = source.slice(begin, index)
+                issue = abort('Illegal empty exponent.', 0, raw.length)
 
                 return { type: 'number', value: null, raw, issue }
               }
@@ -280,9 +300,9 @@ function lex (source, options) {
           }
 
           if (isSigned) {
-            issue = abort('A negative sign may only precede numbers.', index - begin, 1)
+            raw = getRawForNumber(source, begin)
 
-            raw = source.slice(begin, index)
+            issue = abort('A negative sign may only precede numbers.', 0, 1)
 
             return { type: 'number', value: null, raw, issue }
           }

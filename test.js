@@ -220,18 +220,91 @@ test('lexer', function (t) {
       t2.end()
     })
     t1.test('Illegal octal literal.', function (t2) {
+      testCase(t2, `012`, [
+        { type: 'number', value: null, raw: `012`, issue: { message: 'Illegal octal literal.', start: 0, length: 3 } }
+      ], { throwOnError: false })
+      testCase(t2, `012 `, [
+        { type: 'number', value: null, raw: `012`, issue: { message: 'Illegal octal literal.', start: 0, length: 3 } }
+      ], { throwOnError: false })
+      testCase(t2, `{"foo":012}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'number',
+          value: null,
+          raw: `012`,
+          issue: {
+            message: 'Illegal octal literal.',
+            start: 0,
+            length: 3
+          }
+        }], { throwOnError: false })
+      testCase(t2, `{"foo":012-}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'number',
+          value: null,
+          raw: `012`,
+          issue: {
+            message: 'Illegal octal literal.',
+            start: 0,
+            length: 3
+          }
+        }], { throwOnError: false })
+      testCase(t2, `{"foo":012}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'number',
+          value: null,
+          raw: `012`,
+          issue: {
+            message: 'Illegal octal literal.',
+            start: 0,
+            length: 3
+          }
+        }], { throwOnError: false })
+      testCase(t2, `{"foo":012}`, [
+        { type: 'punctuator', value: '{', raw: '{' },
+        { type: 'string', value: 'foo', raw: '"foo"' },
+        { type: 'punctuator', value: ':', raw: ':' }, {
+          type: 'number',
+          value: null,
+          raw: `012`,
+          issue: {
+            message: 'Illegal octal literal.',
+            start: 0,
+            length: 3
+          }
+        }], { throwOnError: false })
       t2.end()
     })
     t1.test('Illegal trailing decimal.', function (t2) {
+      testCase(t2, `0..120e-`, [
+        { type: 'number', value: null, raw: `0..120e-`, issue: { message: 'Illegal trailing decimal.', start: 2, length: 1 } }
+      ], { throwOnError: false })
       t2.end()
     })
     t1.test('Illegal empty exponent.', function (t2) {
+      testCase(t2, `1e`, [
+        { type: 'number', value: null, raw: `1e`, issue: { message: 'Illegal empty exponent.', start: 0, length: 2 } }
+      ], { throwOnError: false })
       t2.end()
     })
     t1.test('A negative sign may only precede numbers.', function (t2) {
+      testCase(t2, `-&`, [
+        { type: 'number', value: null, raw: `-`, issue: { message: 'A negative sign may only precede numbers.', start: 0, length: 1 } }
+      ], { throwOnError: false })
+      testCase(t2, `--0023312312312`, [
+        { type: 'number', value: null, raw: `--0023312312312`, issue: { message: 'A negative sign may only precede numbers.', start: 0, length: 1 } }
+      ], { throwOnError: false })
       t2.end()
     })
     t1.test('Unrecognized token.', function (t2) {
+      testCase(t2, `&`, [
+        { type: 'unknown', value: null, raw: `&`, issue: { message: 'Unrecognized token.', start: 0, length: 1 } }
+      ], { throwOnError: false })
       t2.end()
     })
   })
